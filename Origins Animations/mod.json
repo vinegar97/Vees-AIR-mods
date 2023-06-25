@@ -1,0 +1,12 @@
+{
+	"Metadata":
+	{
+		"Name": "Origins Additional Animations",
+		"UniqueID": "vee-origins-animations",
+		"Author": "HoneyVee",
+		"Description": "Adds several animations from the new Sonic Origins release, such as turntable crouch and look, facing back while hanging, etc.",
+		"URL": "https://sonic3air.org",
+		"ModVersion": "23.06.26.0",
+		"GameVersion": "20.04.26.0"
+	}
+}
