@@ -518,8 +518,15 @@ function u64 Standalone.getModdedAnimationSpriteKey(u8 character, u16 animationS
 		// Character-specific animations
 		if ((character == CHARACTER_TAILS && char.state == char.state.TAILS_TRANSFORM) || (character == CHARACTER_KNUCKLES && char.state == char.state.TRANSFORMING))
 		{
+			// Super transformation animation for Tails and Knuckles
 			if (char.animation.frame < 2)
-				return stringformat("%s_3dcrouch_1_2", getCharacterSpriteKey(character))
+			{
+				// Draw a unique sprite for the first few frames
+				key = stringformat("%s_transform_0", getCharacterSpriteKey(character))
+				if (!Renderer.hasCustomSprite(key))
+					key = stringformat("%s_3dcrouch_1_2", getCharacterSpriteKey(character))
+				return key
+			}
 		}
 
 		if (character == CHARACTER_SONIC)

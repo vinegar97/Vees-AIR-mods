@@ -15,7 +15,13 @@
 		{
 			"DisplayName": "iCloudius' Falling sprites for all",
 			"IsRequired": "0",
-			"Priority": "Lower"
+			"Priority": "higher"
+		},
+		"springtwirlv1-4-1_2b03b":
+		{
+			"DisplayName": "Dynamic Lemons' Spring Twirl",
+			"IsRequired": "0",
+			"Priority": "higher"
 		}
 	}
 }
