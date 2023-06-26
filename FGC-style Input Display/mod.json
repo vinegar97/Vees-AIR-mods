@@ -1,0 +1,12 @@
+{
+    "Metadata":
+    {
+        "Name": "FGC-style input display",
+		"UniqueID": "vee-fgc-input-display",
+        "Author": "HoneyVee",
+        "Description": "Adds a queue to display button inputs as they are pressed",
+		"URL": "https://github.com/vinegar97/Vees-AIR-mods",
+        "ModVersion": "23.06.26.0",
+        "GameVersion": "23.05.14.1"
+    }
+}

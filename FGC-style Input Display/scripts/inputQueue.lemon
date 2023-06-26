@@ -1,0 +1,119 @@
+
+global u32 inputQueue.capacity		// Address to store queue elements
+global u32 inputQueue.address		// Maximum capacity of the queue
+global u32 inputQueue.front			// Index of the front element
+global u32 inputQueue.rear			// Index of the rear element
+global u32 inputQueue.size			// Current size of the queue
+
+function void Init()
+{
+	inputQueue.ConstructQueue(0x820000, 8)  // Create a queue with a maximum capacity of 5
+
+	/* inputQueue.enqueue(10)
+	inputQueue.enqueue(20)
+	inputQueue.enqueue(30)
+
+	debugLog(stringformat("Front element: %d", inputQueue.getFront()))  // Output: 10
+
+	debugLog(stringformat("Dequeued element: %d", inputQueue.dequeue()))
+	inputQueue.enqueue(40)
+
+	debugLog(stringformat("Front element: %d", inputQueue.getFront()))  // Output: 20 */
+
+	base.Init()
+}
+
+// Constructor to initialize an empty queue
+function void inputQueue.ConstructQueue(u32 address, u32 capacity)
+{
+	inputQueue.capacity = capacity
+	inputQueue.address = address
+	inputQueue.front = 0
+	inputQueue.rear = -1
+	inputQueue.size = 0
+}
+
+// Destructor to free the dynamically allocated memory
+function void inputQueue.DestructQueue()
+{
+	inputQueue.capacity = -1
+	inputQueue.address = -1
+	inputQueue.front = 0
+	inputQueue.rear = -1
+	inputQueue.size = 0
+}
+
+// Function to check if the queue is empty
+function bool inputQueue.isEmpty()
+{
+	return (inputQueue.getSize() == 0)
+}
+
+// Function to check if the queue is full
+function bool inputQueue.isFull()
+{
+	return (inputQueue.getSize() == inputQueue.capacity)
+}
+
+// Function to get the current size of the queue
+function u32 inputQueue.getSize()
+{
+	return inputQueue.size
+}
+
+// Function to enqueue an element
+function void inputQueue.enqueue(u16 element)
+{
+	if (inputQueue.isFull())
+	{
+		debugLog("Queue is full. Cannot enqueue.")
+		return
+	}
+	inputQueue.rear = (inputQueue.rear + 1) % inputQueue.capacity
+	u16[inputQueue.address + (inputQueue.rear*2)] = element
+	inputQueue.size++
+}
+
+// Function to dequeue an element
+function u16 inputQueue.dequeue()
+{
+	if (inputQueue.isEmpty())
+	{
+		debugLog("Queue is empty. Cannot dequeue.")
+		return 0xffff  // Or throw an exception
+	}
+	u16 dequeuedElement = u16[inputQueue.address + (inputQueue.front*2)]
+	inputQueue.front = (inputQueue.front + 1) % inputQueue.capacity
+	inputQueue.size--
+	return dequeuedElement
+}
+
+// Function to get the front element of the queue
+function u16 inputQueue.getFront()
+{
+	return inputQueue.getElementAt(inputQueue.front)
+}
+
+// Function to get the rear element of the queue
+function u16 inputQueue.getRear()
+{
+	return inputQueue.getElementAt(inputQueue.rear)
+}
+
+// Function to get the element at a specific index in the queue
+function u16 inputQueue.getElementAt(u32 index)
+{
+	if (index >= inputQueue.size)
+	{
+		debugLog("Invalid index.")
+		return 0xffff  // Or throw an exception
+	}
+	if (inputQueue.isEmpty())
+	{
+		debugLog("Queue is empty.")
+		return 0xffff  // Or throw an exception
+	}
+	u16 elementIndex = (inputQueue.front + index) % inputQueue.capacity
+	return u16[inputQueue.address + (elementIndex*2)]
+}
+

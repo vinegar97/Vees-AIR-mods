@@ -1,0 +1,8 @@
+{
+	"input_icon_touch_none":  { "File": "input_icons.png", "Rect": "48,64,16,16", "Center": "8,8" },
+	"input_icon_touch_L":  { "File": "input_icons.png", "Rect": "162,64,32,16", "Center": "8,8" },
+	"input_icon_touch_R":  { "File": "input_icons.png", "Rect": "194,64,32,16", "Center": "8,8" },
+	"input_icon_xbox_none":  { "File": "input_icons.png", "Rect": "227,80,16,16", "Center": "8,8" },
+	"input_icon_xbox_L":  { "File": "input_icons.png", "Rect": "162,80,32,16", "Center": "8,8" },
+	"input_icon_xbox_R":  { "File": "input_icons.png", "Rect": "194,80,32,16", "Center": "8,8" }
+}

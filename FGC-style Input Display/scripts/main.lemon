@@ -1,0 +1,78 @@
+
+include inputQueue
+
+function void RenderHUD()
+{
+	DrawFGCInput()
+	base.RenderHUD()
+}
+
+function void DrawFGCInput()
+{
+#if STANDALONE
+	if (DEBUG_DISABLE_HUD)
+		return
+#endif
+
+	constant array<string> inputIcons =
+	{
+		"@input_icon_button_up",
+		"@input_icon_button_down",
+		"@input_icon_button_left",
+		"@input_icon_button_right",
+		"@input_icon_button_B",
+		"@input_icon_button_X",
+		"@input_icon_button_A",
+		"@input_icon_button_start",
+		"@input_icon_button_L",
+		"@input_icon_button_Y",
+		"@input_icon_button_R",
+		"@input_icon_button_back"
+	}
+
+	if (HUD.useMobileLivesDisplay())
+		return
+
+	/* if ((Input.getController(0) != inputQueue.getRear()) && (Input.getController(0) != 0) && (Input.getController(0) != Input.getControllerPrevious(0))) */
+	if (Input.getController(0) != Input.getControllerPrevious(0))
+	{
+		if (inputQueue.isFull())
+			u16 input = inputQueue.dequeue()
+
+		inputQueue.enqueue(Input.getController(0))
+	}
+
+	if (inputQueue.isEmpty())
+		return
+
+	u8 py = 72
+	for (u8 i = 0; i < inputQueue.getSize(); i++)
+	{
+		// Loop through each element of the queue
+		u16 input = inputQueue.getElementAt(i)
+		u8 px = 23
+
+		if (input == 0)
+		{
+			// No buttons pressed, draw neutral icon
+			Renderer.drawCustomSprite((HUD.useMobileLivesDisplay()) ? "input_icon_touch_none" : "input_icon_xbox_none", px, py, 0, SPRITE_FLAG_PRIO, 0xe000, 0, 255)
+			py += 16	// Offset down for the next input element
+			continue
+		}
+
+		for (u8 j = 0; j < 12; j++)
+		{
+			// Loop through each button index in the queue element
+			u16 inputHardware = 1 << j
+
+			if (input & inputHardware)
+			{
+				// Button is pressed in element
+				Renderer.drawCustomSprite(inputIcons[j], px, py, 0, SPRITE_FLAG_PRIO, 0xe000, 0, 255)
+				px += 16	// Offset to the right for the next button
+			}
+		}
+		py += 16	// Offset down for the next input element
+	}
+
+}
