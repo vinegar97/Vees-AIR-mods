@@ -5,8 +5,17 @@
 		"UniqueID": "vee-origins-animations",
 		"Author": "HoneyVee",
 		"Description": "Adds several animations from the new Sonic Origins release, such as turntable crouch and look, facing back while hanging, etc.",
-		"URL": "https://sonic3air.org",
-		"ModVersion": "23.06.26.0",
+		"URL": "https://github.com/vinegar97/Vees-AIR-mods",
+		"ModVersion": "23.06.26.1",
 		"GameVersion": "20.04.26.0"
+	},
+	"OtherMods":
+	{
+		"Falling-Sprites-For-All-main":
+		{
+			"DisplayName": "iCloudius' Falling sprites for all",
+			"IsRequired": "0",
+			"Priority": "Lower"
+		}
 	}
 }

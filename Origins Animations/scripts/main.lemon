@@ -368,14 +368,14 @@ function u16 Standalone.getModdedAnimationSpriteEx(u8 character, u8 animationSpr
 	u32 char.object_standing_on.update_address = u32[0xffff0000 + char.object_standing_on]
 	u8 input_state = (character == CHARACTER_TAILS) ? control.tails.state : control.player1.state		// Get player input
 
-	/* if ((char.control_flags & 0x02) == 0)
-		return animationSpriteEx */
+	if ((char.control_flags & 0x02) == 0)
+		return animationSpriteEx
 
 	if (animationSpriteEx == 0xe5 || animationSpriteEx == 0xe9)				// Hanging frames
 	{
-		if ((char.control_flags & 0x02) == 0)
+		/* if ((char.control_flags & 0x02) == 0) */
 		{
-			if (/* character == CHARACTER_TAILS && */ !(char.flags & char.flag.FACING_LEFT) && char.state != char.state.HANGING)
+			if (character == CHARACTER_TAILS && !(char.flags & char.flag.FACING_LEFT) && char.state != char.state.HANGING)
 				char.state = char.state.HANGING
 
 			u8 anim_timer = 4*2	// Amount of delay between frames
@@ -400,13 +400,13 @@ function u16 Standalone.getModdedAnimationSpriteEx(u8 character, u8 animationSpr
 				return 0x90 + char.animation.frame
 			
 		}
-		else
+		/* else
 		{
 			if (char.animation.frame != 0)
 				char.animation.frame = 0
 			if (char.animation.timer != 0)
 				char.animation.timer = 0
-		}
+		} */
 	}
 	else if (Vee_OriginsAnimations.customAnimationAddress != 0)		// 3D standing frames
 	/* else if (animationSpriteEx >= 0x55 && (animationSpriteEx <= ((char.render_flags & render_flag.FLIP_X) ? 0x5b+7 : 0x5b))) */
@@ -510,9 +510,56 @@ function u16 Standalone.getModdedAnimationSpriteEx(u8 character, u8 animationSpr
 
 function u64 Standalone.getModdedAnimationSpriteKey(u8 character, u16 animationSpriteEx)
 {
-	string key = 0
+	string key = ""
 	u32 char.object_standing_on.update_address = u32[0xffff0000 + char.object_standing_on]
 	u8 input_state = (character == CHARACTER_TAILS) ? control.tails.state : control.player1.state		// Get player input
+
+	{
+		// Character-specific animations
+		if ((character == CHARACTER_TAILS && char.state == char.state.TAILS_TRANSFORM) || (character == CHARACTER_KNUCKLES && char.state == char.state.TRANSFORMING))
+		{
+			if (char.animation.frame < 2)
+				return stringformat("%s_3dcrouch_1_2", getCharacterSpriteKey(character))
+		}
+
+		if (character == CHARACTER_SONIC)
+		{
+			if (char.state == char.state.SONIC_DROPDASH)		// Sonic's Drop Dash animation
+			{
+				u8 anim_speed = 1
+				u8 anim_frames = 15
+
+				key = stringformat("%s_dropdash_%d", getCharacterSpriteKey(CHARACTER_SONIC), (level.framecounter >> anim_speed) & anim_frames)
+			}
+		}
+		else if (character == CHARACTER_KNUCKLES)
+		{
+			if (char.state == char.state.KNUX_FLYCLIMB)			// Knuckles' gliding animation
+			{
+				if (animationSpriteEx == 0xc0 /* || animationSpriteEx == 0xc4 */)		// Straight gliding frames
+				{
+					u8 anim_speed = 2
+					u8 anim_frames = 1
+
+					key = stringformat("%s_glide_%d", getCharacterSpriteKey(CHARACTER_KNUCKLES), ((level.framecounter >> anim_speed) & anim_frames))
+				}
+			}
+			else if (char.state == char.state.GOT_HURT_PANIC || char.state == char.state.FALLING_PANIC)
+			{
+				u8 anim_speed = 3
+				u8 anim_frames = 1
+
+				key = stringformat((char.state == char.state.GOT_HURT_PANIC) ? "%s_got_hurt_panic_%d" : "%s_falling_panic_%d", getCharacterSpriteKey(CHARACTER_KNUCKLES), ((level.framecounter >> anim_speed) & anim_frames))
+			}
+			else if (char.state != char.state.GOT_HURT)
+			{
+				key = stringformat((animationSpriteEx == 0x8d) ? "%s_falling_panic_1" : (animationSpriteEx == 0x8c) ? "%s_falling_panic_0" : 0, getCharacterSpriteKey(CHARACTER_KNUCKLES))
+			}
+		}
+
+		if (Renderer.hasCustomSprite(key))
+			return key
+	}
 
 	if ((char.control_flags & 0x02) == 0)
 		return key
@@ -558,49 +605,6 @@ function u64 Standalone.getModdedAnimationSpriteKey(u8 character, u16 animationS
 				key = stringformat("%s_3dlookup_%d_%d", getCharacterSpriteKey(character))
 
 			key = stringformat(key, char.animation.frame, animationSpriteEx - 0x55)
-		}
-	}
-	else		// Character-specific animations
-	{
-		if ((character == CHARACTER_TAILS && char.state == char.state.TAILS_TRANSFORM) || (character == CHARACTER_KNUCKLES && char.state == char.state.TRANSFORMING))
-		{
-			if (char.animation.frame < 2)
-				return stringformat("%s_3dcrouch_1_2", getCharacterSpriteKey(character))
-		}
-
-		if (character == CHARACTER_SONIC)
-		{
-			if (char.state == char.state.SONIC_DROPDASH)		// Sonic's Drop Dash animation
-			{
-				u8 anim_speed = 1
-				u8 anim_frames = 15
-
-				key = stringformat("%s_dropdash_%d", getCharacterSpriteKey(CHARACTER_SONIC), (level.framecounter >> anim_speed) & anim_frames)
-			}
-		}
-		else if (character == CHARACTER_KNUCKLES)
-		{
-			if (char.state == char.state.KNUX_FLYCLIMB)			// Knuckles' gliding animation
-			{
-				if (animationSpriteEx == 0xc0 /* || animationSpriteEx == 0xc4 */)		// Straight gliding frames
-				{
-					u8 anim_speed = 2
-					u8 anim_frames = 1
-
-					key = stringformat("%s_glide_%d", getCharacterSpriteKey(CHARACTER_KNUCKLES), ((level.framecounter >> anim_speed) & anim_frames))
-				}
-			}
-			else if (char.state == char.state.GOT_HURT_PANIC || char.state == char.state.FALLING_PANIC)
-			{
-				u8 anim_speed = 3
-				u8 anim_frames = 1
-
-				key = stringformat((char.state == char.state.GOT_HURT_PANIC) ? "%s_got_hurt_panic_%d" : "%s_falling_panic_%d", getCharacterSpriteKey(CHARACTER_KNUCKLES), ((level.framecounter >> anim_speed) & anim_frames))
-			}
-			else if (char.state != char.state.GOT_HURT)
-			{
-				key = stringformat((animationSpriteEx == 0x8d) ? "%s_falling_panic_1" : (animationSpriteEx == 0x8c) ? "%s_falling_panic_0" : 0, getCharacterSpriteKey(CHARACTER_KNUCKLES))
-			}
 		}
 	}
 
