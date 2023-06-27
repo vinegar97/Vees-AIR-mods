@@ -1,0 +1,107 @@
+
+// This mod expands Super Sonic's animation frame usage by making him reused base form's longer animations, while retaining his unique sprites
+
+// Overload the original function "ApplyROMManipulations"
+
+function void ApplyROMManipulations()
+{
+	base.ApplyROMManipulations()
+
+	// Make Super Sonic use the same animations as base form (its all the same anyway, just longer)
+	u16[0x012c3a] = 0xfeb4		// Walking. same length, but saves space
+	u16[0x012c3c] = 0xfebe		// Running. now 4 frames from the previous 2
+	u16[0x012c4a] = 0xff5d		// Crouching. now 2 frames frames from the previous 1
+	u16[0x012c42] = 0xfedc		// Pushing. same length, but saves space
+
+	// Extend Super Sonic's running animation by two frame
+	u16[0x012c87] = 0x2324 		// Add additional frames
+
+//# address-hook(0x012600) end(0x01286c)
+//# translated(0x012a2a) end(0x012a6e)
+function void UpdateSonicAnimation()
+{
+	if (char.state != char.state.COWERING && (char.state != char.state.BALANCING1 || char.state != char.state.BALANCING1) || !super.active)
+	{
+		base.UpdateSonicAnimation()
+		return
+	}
+	
+	if (char.state != char.state.former)
+	{
+		char.state.former = char.state
+		char.animation.frame = 0
+		char.animation.timer = 0
+		char.flags &= ~char.flag.PUSHING
+	}
+
+	D0.u8 = getAnimationSprite(0)
+
+	// D0.u8 is either:
+	//  - 0xff when running
+	//  - 0xfe when rolling (on ground or in air)
+	//  - between 0x00 and 0x7f in other cases (like standing, balancing, spring-jumping, getting hurt, etc.)
+
+	/* if (D0.u8 < 0x80) */
+	{
+		D1.u8 = char.flags & char.flag.FACING_LEFT
+		char.render_flags = (char.render_flags & ~(render_flag.FLIP_X | render_flag.FLIP_Y)) | D1.u8
+
+		--char.animation.timer
+		if (s8(char.animation.timer) < 0)
+		{
+			char.animation.timer = D0.u8
+			D0.u8 = getAnimationSprite(char.animation.frame + 1)	// Load next animation frame byte
+
+			if (D0.u8 == 0xff)
+			{
+				// Loop animation from the start
+				char.animation.frame = 1
+				char.animation.sprite = getAnimationSprite(1)
+			}
+			else if (D0.u8 == 0xfe)
+			{
+				// Loop animation from specific frame
+				u8 diff = getAnimationSprite(char.animation.frame + 2)
+				char.animation.frame -= diff
+				char.animation.sprite = getAnimationSprite(char.animation.frame + 1)
+				++char.animation.frame
+			}
+			else if (D0.u8 == 0xfd)
+			{
+				// Change to another animation
+				char.state = getAnimationSprite(char.animation.frame + 2)
+			}
+			else
+			{
+				// Advance to next frame
+				char.animation.sprite = D0.u8
+				++char.animation.frame
+			}
+		}
+	}
+}
+
+
+function u8 getAnimationSprite(u8 animationFrame)
+{
+	constant array<u8> char.state.SUPERSONIC_COWERING =
+	{
+		0x05, 0x9c, 0x9b, 0xfe, 0x01
+	}
+
+	constant array<u8> char.state.SUPERSONIC_BALANCING =
+	{
+		0x05, 0xa1, 0xa2, 0xa3, 0xa2, 0xa4, 0xa5, 0xa6, 0xa5, 0xff
+	}
+
+	if (char.state == char.state.COWERING)
+		return char.state.SUPERSONIC_COWERING[animationFrame]
+
+	if (char.state == char.state.BALANCING1 || char.state == char.state.BALANCING2)
+		return char.state.SUPERSONIC_BALANCING[animationFrame]
+
+	// Default behaviour: use original animations from ROM
+	A1 = (super.active && char.state <= char.state.TRANSFORMING) ? 0x012c3a : 0x012aa6
+	A1 = tableLookupAddress(A1, char.state * 2)
+	return u8[A1 + animationFrame]
+}
