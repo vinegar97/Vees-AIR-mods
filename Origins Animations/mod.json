@@ -6,8 +6,8 @@
 		"Author": "HoneyVee",
 		"Description": "Adds several animations from the new Sonic Origins release, such as turntable crouch and look, facing back while hanging, etc.",
 		"URL": "https://github.com/vinegar97/Vees-AIR-mods",
-		"ModVersion": "23.06.26.1",
-		"GameVersion": "20.04.26.0"
+		"ModVersion": "23.06.30.0",
+		"GameVersion": "22.09.10.0"
 	},
 	"OtherMods":
 	{
@@ -20,6 +20,12 @@
 		"springtwirlv1-4-1_2b03b":
 		{
 			"DisplayName": "Dynamic Lemons' Spring Twirl",
+			"IsRequired": "0",
+			"Priority": "higher"
+		},
+		"Custom Super Knuckles":
+		{
+			"DisplayName": "Emi' Custom Super/Hyper Knuckles Sprites",
 			"IsRequired": "0",
 			"Priority": "higher"
 		}

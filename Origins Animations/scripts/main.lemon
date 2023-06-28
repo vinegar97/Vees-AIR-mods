@@ -368,6 +368,12 @@ function u16 Standalone.getModdedAnimationSpriteEx(u8 character, u8 animationSpr
 	u32 char.object_standing_on.update_address = u32[0xffff0000 + char.object_standing_on]
 	u8 input_state = (character == CHARACTER_TAILS) ? control.tails.state : control.player1.state		// Get player input
 
+	{
+		// Character-specific animations
+		if (character == CHARACTER_KNUCKLES && char.state == char.state.KNUX_FLYCLIMB && animationSpriteEx == 0xc4 && ((char.render_flags & render_flag.FLIP_X) == 0))		// Knuckles gliding left
+			char.render_flags |= render_flag.FLIP_X
+	}
+
 	if ((char.control_flags & 0x02) == 0)
 		return animationSpriteEx
 
