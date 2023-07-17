@@ -834,7 +834,8 @@ function void fn07eeee()
 function void fn032610()
 {
 	base.fn032610()
-	Vee_OriginsAnimations.customAnimationAddress = 0x03263e
+	if ((objA0.subtype2c == 0 || objA0.subtype2c % 0x10 == 0) || global.zone == 0x06)
+		Vee_OriginsAnimations.customAnimationAddress = 0x03263e
 }
 
 // LBZ rotating elevator
