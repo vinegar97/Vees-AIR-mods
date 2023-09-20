@@ -1,0 +1,28 @@
+//# address-hook(0x06169a) end(0x0616e4)
+function void fn06169a()
+{
+	if (SetupObjectAttributesSlotted(0x06198e))
+		return
+
+	u32[A0 + 0x30] = 0x0619c2
+
+	bool isSuperEmeraldStage = (objA0.subtype2c & 0x80) || GiantRing.isSuperEmeraldStage()		// First condition is for the first giant ring in Mushroom Hill that always leads to Hidden Palace
+	if (isSuperEmeraldStage && global.super_emeralds != 7)
+	{
+		objA0.flags38 |= 0x40
+		copyMemory(0xfffffade, 0x061c28, 8)
+		copyMemory(0xfffffade+8, 0x061ca4, 8)
+		u16[0xfffffade+16] = 0
+	}
+	else if (global.chaos_emeralds != 7)
+	{
+		objA0.flags38 |= 0x40
+		copyMemory(0xfffffade, 0x061cda, 8)
+		copyMemory(0xfffffade+8, 0x061d18, 8)
+		u16[0xfffffade+16] = 0
+	}
+
+	fn0616e6()
+}
+
+

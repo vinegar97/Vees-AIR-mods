@@ -1,0 +1,12 @@
+{
+	"PalSPtr_SSEntry_super":
+	{
+		"File": "PalSPtr_SSEntry_super.bin",
+		"RomInject": "0x061cda"
+	},
+	"PalSPtr_SSEntry2_super":
+	{
+		"File": "PalSPtr_SSEntry2_super.bin",
+		"RomInject": "0x061d18"
+	}
+}
