@@ -1,0 +1,10 @@
+
+
+//# address-hook(0x037f1a) end(0x037f3c)
+function void fn037f1a()
+{
+	if (competition_mode.multiplay == 0 && objA0.position.y.u16 != 0x90)
+		objA0.position.y.u16 = 0x90
+
+	base.fn037f1a()
+}

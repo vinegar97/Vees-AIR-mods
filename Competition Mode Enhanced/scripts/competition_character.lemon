@@ -1,0 +1,975 @@
+
+
+global u8 knuckles.glideclimbstate.glidestate = 0
+global u8 knuckles.glideclimbstate.climbstate = 0
+
+
+//# address-hook(0x010868) end(0x010894)
+//# alias(fn010868) deprecated
+function void CompetitionMode.Character.UpdateUprightInAir.Sonic_Knuckles()
+{
+	// Gliding or not?
+	if (char.character == CHARACTER_KNUCKLES && char.double_jump_state != 0)
+	{
+		UpdateKnucklesGlide()
+		// Character.CheckAgainstMoveBorders()
+		UpdateMovementStraightSimple()
+		UpdateKnucklesGlideCollision()
+		return
+	}
+
+	base.CompetitionMode.Character.UpdateUprightInAir.Sonic_Knuckles()
+}
+
+
+#if STANDALONE
+function bool onCharacterPressedJumpInMidAir(u8 input_state, u8 input_pressed)
+{
+	if (char.character == CHARACTER_KNUCKLES && competition_mode.active)
+	{
+		KnucklesPressedJumpInMidAir()
+		return false
+	}
+
+	// Use normal jump button reaction
+	return base.onCharacterPressedJumpInMidAir(input_state, input_pressed)
+}
+#endif
+
+
+//# address-hook(0x016890) end(0x016c78)
+//# translated(0x016f6c) end(0x016fa6)
+function void UpdateKnucklesGlideCollision()
+{
+	if (!competition_mode.active)
+	{
+		base.UpdateKnucklesGlideCollision()
+		return
+	}
+
+	if (char.double_jump_state == 0)
+		return
+
+	knuckles.glideclimbstate.glidestate = (A0 != 0xffffb000) ? 0x04 : 0x02
+	knuckles.glideclimbstate.climbstate = (A0 != 0xffffb000) ? 0x40 : 0x20
+	D0.u8 = char.double_jump_state
+	if (char.double_jump_state == 1 || char.double_jump_state > 5)	// Last check is probably not needed, just added for full compatibility
+	{
+		// Gliding/Climbing state
+		fn01793e()
+		if (knuckles.glideclimbstate & knuckles.glideclimbstate.glidestate)	// Gliding?
+		{
+			if (knuckles.glideclimbstate & knuckles.glideclimbstate.climbstate)	// Climbing?
+			{
+				if ((knuckles.preventclimbing & 0x80) == 0)
+				{
+					bool hit_wall = true
+					D5.u8 = char.layer_flags2
+					D0.u8 = knuckles.glide_direction + 0x40
+					if (D0.s8 < 0)
+					{
+						char.flags |= char.flag.FACING_LEFT
+						CheckHitboxCollisionLeft()
+
+						D1.u16 |= D0.u16
+						if (D1.u16 != 0)
+						{
+							D3.u16 = char.position.x.u16 - s8(char.hitbox_extends.y) - 1
+
+							// if (global.inv_gravity == 0)
+							{
+								D2.u16 = char.position.y.u16 - 11
+								Character.checkFloorEdgeCollisionFixedY()
+								if (D1.s16 < 0 || D1.u16 >= 12)
+								{
+									hit_wall = false
+								}
+								else
+								{
+									char.position.y.u16 += D1.u16
+								}
+							}
+							// else
+							// {
+								// D2.u16 = (char.position.y.u16 + 11) ^ 0x0f
+								// Character.checkCeilingEdgeCollisionFixedY()
+								// if (D1.s16 < 0 || D1.u16 >= 12)
+								// {
+									// hit_wall = false
+								// }
+								// else
+								// {
+									// char.position.y.u16 -= D1.u16
+								// }
+							// }
+						}
+						else
+						{
+							++char.position.x.u16
+						}
+					}
+					else
+					{
+						char.flags &= ~char.flag.FACING_LEFT
+						CheckHitboxCollisionRight()
+
+						D1.u16 |= D0.u16
+						if (D1.u16 != 0)
+						{
+							D3.u16 = char.position.x.u16 + s8(char.hitbox_extends.y) + 1
+
+							// if (global.inv_gravity == 0)
+							{
+								D2.u16 = char.position.y.u16 - 11
+								Character.checkFloorEdgeCollisionFixedY()
+								if (D1.s16 < 0 || D1.u16 >= 12)
+								{
+									hit_wall = false
+								}
+								else
+								{
+									char.position.y.u16 += D1.u16
+								}
+							}
+							// else
+							// {
+								// D2.u16 = (char.position.y.u16 + 11) ^ 0x0f
+								// Character.checkCeilingEdgeCollisionFixedY()
+								// if (D1.s16 < 0 || D1.u16 >= 12)
+								// {
+									// hit_wall = false
+								// }
+								// else
+								// {
+									// char.position.y.u16 -= D1.u16
+								// }
+							// }
+						}
+					}
+
+					if (hit_wall)
+					{
+						// When Hyper Knuckles hits a wall fast enough, that kills all badniks on screen
+						if ((super.active & 0x80) && u16(char.groundspeed) >= 0x480)
+						{
+							camera.hyper_knux_shake = 0x14
+							Character.ClearEnemiesOnScreen()
+							playSound(0x49)
+						#if STANDALONE
+							Input.setControllerRumbleByAddress(A0, 0.5f, 1.0f, 200)
+						#endif
+						}
+						else
+						{
+							playSound(SFX_GRAB)
+						#if STANDALONE
+							Input.setControllerRumbleByAddress(A0, 0.5f, 0.0f, 200)
+						#endif
+						}
+
+						char.groundspeed = 0
+						char.velocity.x = 0
+						char.velocity.y = 0
+						char.double_jump_state = 4		// Knuckles climbing state
+						char.animation.sprite = 0x2c
+						char.animation.timer = 0x7f
+						char.animation.frame = 0
+						knuckles.glide_direction = 3
+						char.position.x.frac = char.position.x.u16
+
+					#if STANDALONE
+						// Prevent Knuckles from climbing above the screen limits
+						//  -> This same check is down while climbing up/down, but we do it here to correct the position right away
+						//  -> This is added for S3AIR specifically because it's now much easier to get outside the screen after we removed the stopping effect when gliding the the top of screen (see "UpdateKnucklesGlide")
+						if (level.vertical_wrap != 0xff00)
+						{
+							s16 minY = level.vertical_wrap + 0x10
+							if (s16(char.position.y.u16) < minY)
+							{
+								char.position.y.u16 = minY
+							}
+						}
+					#endif
+						return
+					}
+				}
+
+				char.double_jump_state = 2		// Knuckles glide drop state
+				char.state = char.state.KNUX_FALLING
+				char.hitbox_extends.x = char.hitbox.default.x
+				char.hitbox_extends.y = char.hitbox.default.y
+				knuckles.glideclimbstate |= knuckles.glideclimbstate.glidestate
+				return
+			}
+
+			if (control.player1.state & CONTROL_ABC)
+			{
+				fn016fa8()
+			}
+			else
+			{
+				// Stop gliding
+				char.double_jump_state = 2		// Knuckles glide drop state
+				char.state = char.state.KNUX_FALLING
+				if (char.velocity.x < 0)
+					char.flags |= char.flag.FACING_LEFT
+				else
+					char.flags &= ~char.flag.FACING_LEFT
+
+				char.velocity.x >>= 2
+				char.hitbox_extends.x = char.hitbox.default.x
+				char.hitbox_extends.y = char.hitbox.default.y
+
+			#if STANDALONE
+				// Perform a ground collision check after updating the hitbox height
+				//  -> This prevents getting killed when Knuckles stops gliding just above the floor and there's a blocker object right underneath
+				Character.CheckFloorCollision()
+				if (D1.s16 < 0)
+				{
+					char.position.y.u16 += /* global.inv_gravity ? -D1.s16 : */ D1.s16
+				}
+			#endif
+			}
+		}
+		else
+		{
+			if (char.velocity.x < 0)
+				char.flags |= char.flag.FACING_LEFT
+			else
+				char.flags &= ~char.flag.FACING_LEFT
+
+			D0.u8 = (char.rotation + 0x20) & 0xc0
+			if (D0.u8 != 0)
+			{
+				char.velocity.x = char.groundspeed
+				char.velocity.y = 0
+				Character.LandingOnGroundNoSpindash()
+			}
+			else
+			{
+				char.double_jump_state = 3		// Knuckles ground slide state
+				char.animation.sprite = 0x2f
+				char.animation.timer = 0x7f
+				char.animation.frame = 0
+				if (char.drown_countdown >= 12)
+				{
+					u8[A6 + 0x05] = 0x06		// Base update for braking dust
+					u8[A6 + 0x22] = 0x15		// First frame of dust animation
+				}
+			}
+		}
+	}
+	else if (char.double_jump_state == 2)
+	{
+		// Falling state
+		Character.UpdateControlInAir()
+
+		// Gravity
+		char.velocity.y += (char.flags & char.flag.UNDERWATER) ? 0x10 : 0x38
+
+		fn01793e()
+		if ((knuckles.glideclimbstate & knuckles.glideclimbstate.glidestate) == 0)
+		{
+			char.groundspeed = 0
+			char.velocity.x = 0
+			char.velocity.y = 0
+			s16 dy = s8(char.hitbox_extends.y - char.hitbox.default.y)
+			char.position.y.u16 += /* global.inv_gravity ? -dy : */ dy
+			playSound(0x4c)
+
+			D0.u8 = (char.rotation + 0x20) & 0xc0
+			if (D0.u8 != 0)
+			{
+				Character.LandingOnGroundNoSpindash()
+			}
+			else
+			{
+				Character.LandingOnGroundNoSpindash()
+				char.hlock_countdown = 15
+				char.state = char.state.KNUX_STANDUP2
+			}
+		}
+	}
+	else if (char.double_jump_state == 3)
+	{
+		// Touched ground while gliding
+		bool goto016b64 = false
+		if (control.player1.state & CONTROL_ABC)
+		{
+			if (char.velocity.x < 0)
+			{
+				char.velocity.x += 0x20
+				goto016b64 = (char.velocity.x < 0)
+			}
+			else
+			{
+				char.velocity.x -= 0x20
+				goto016b64 = (char.velocity.x >= 0)
+			}
+		}
+
+		if (goto016b64)
+		{
+			fn01793e()
+			Character.CheckFloorCollision()
+			if (D1.s16 < 0x0e)
+			{
+				char.position.y.u16 += /* global.inv_gravity ? -D1.s16 : */ D1.s16
+				char.rotation = D3.u8
+				if ((level.framecounter.low & 0x07) == 0)
+				{
+					playSound(0x7e)
+				}
+			#if STANDALONE
+				Input.setControllerRumbleByAddress(A0, 0.2f, 0.2f, 100)
+			#endif
+			}
+			else
+			{
+				char.double_jump_state = 2		// Knuckles glide drop state
+				char.state = char.state.KNUX_FALLING
+				char.hitbox_extends.x = char.hitbox.default.x
+				char.hitbox_extends.y = char.hitbox.default.y
+				knuckles.glideclimbstate |= knuckles.glideclimbstate.glidestate
+			}
+		}
+		else
+		{
+			char.groundspeed = 0
+			char.velocity.x = 0
+			char.velocity.y = 0
+			s16 dy = s8(char.hitbox_extends.y - char.hitbox.default.y)
+			char.position.y.u16 += /* global.inv_gravity ? -dy : */ dy
+			Character.LandingOnGroundNoSpindash()
+			char.hlock_countdown = 15
+			char.state = char.state.KNUX_STANDUP
+		}
+	}
+	else if (char.double_jump_state == 4)
+	{
+		// Climbing state
+		if (knuckles.preventclimbing & 0x80 || char.position.x.u16 != char.position.x.frac || (char.flags & char.flag.ON_OBJECT))
+		{
+			fn016ed2()
+			return
+		}
+
+		char.groundspeed = 0
+		char.velocity.x = 0
+		char.velocity.y = 0
+		u32[0xfffff796] = (char.layer_flags2 == 0x0d) ? u32[0xfffff7b4] : u32[0xfffff7b8]
+		D5.u8 = char.layer_flags2
+		D1 = 0
+
+		if ((control.player1.state & CONTROL_UP) == 0)
+		{
+			fn016d10()
+			return
+		}
+
+		// Knuckles climbing up
+		// This function handles both normal and inverse gravity
+		// if (global.inv_gravity)
+		// {
+			// fn016da8()
+			// return
+		// }
+
+		s8 sign = /* global.inv_gravity ? -1 : */ 1
+
+		D2.u16 = char.position.y.u16 - 11 * sign
+		fn016f4e()
+		if (D1.s16 >= 4)
+		{
+			// Reached ledge while climbing up
+			fn016eba()
+			return
+		}
+
+		if (D1.u16 != 0)
+		{
+			fn016e60()
+		}
+		// else
+		{
+			D5.u8 = char.layer_flags2
+			D2.u16 = char.position.y.u16 - 8 * sign
+			D3.u16 = char.position.x.u16
+
+			// if (global.inv_gravity)
+			// {
+				// fn00f828()
+			// }
+			// else
+			{
+				fn00fbee()
+			}
+
+			if (D1.s16 < 0)
+			{
+				// Hit ceiling while climbing up
+				char.position.y.u16 -= D1.u16 * sign
+				D1 = 1
+			}
+			else
+			{
+				char.position.y.u16 -= (super.active) ? (2 * sign) : sign
+
+				D1 = 1
+				if (level.vertical_wrap != 0xff00)
+				{
+					// if (global.inv_gravity)
+					// {
+						// s16 minY = move_area.bottom.current + getScreenHeight()
+						// if (s16(char.position.y.u16) > minY)
+						// {
+							// char.position.y.u16 = minY
+						// }
+					// }
+					// else
+					{
+						s16 minY = level.vertical_wrap + 0x10
+						if (s16(char.position.y.u16) < minY)
+						{
+							char.position.y.u16 = minY
+						}
+					}
+				}
+			}
+			fn016e10()
+		}
+	}
+	else if (char.double_jump_state == 5)
+	{
+		// Climbing up a ledge
+		if (char.animation.timer == 0)
+		{
+			fn016efe()
+			if (knuckles.glide_direction >= 4)
+			{
+				char.groundspeed = 0
+				char.velocity.x = 0
+				char.velocity.y = 0
+				if (char.flags & char.flag.FACING_LEFT)
+					--char.position.x.u16
+
+				Character.LandingOnGroundNoSpindash()
+				char.state = char.state.STANDING
+			}
+		}
+	}
+}
+
+
+//# translated(0x016c7c) end(0x016d0c)
+//# translated(0x016d1a) end(0x016da6)
+function void fn016d10_unified()
+{
+	if (!competition_mode.active)
+	{
+		base.fn016d10_unified()
+		return
+	}
+
+	// Knuckles climbing down
+	// This function handles both normal and inverse gravity
+
+	s8 sign = /* global.inv_gravity ? -1 : */ 1
+
+	if (char.animation.sprite == 0x2f)
+	{
+		char.animation.sprite = 0x2c
+		char.position.x.u16 += (char.flags & char.flag.FACING_LEFT) ? 3 : -3
+		char.position.y.u16 += 3 * sign
+	}
+
+	D2.u16 = char.position.y.u16 + 11 * sign
+	fn016f4e()
+	if (D1.u16 != 0)
+	{
+		fn016ed2()
+		return
+	}
+
+	D5.u8 = char.layer_flags1
+	D3.u16 = char.position.x.u16
+	D2.u16 = char.position.y.u16 + 9 * sign
+
+	// if (global.inv_gravity)
+	// {
+		// fn00fbee()
+	// }
+	// else
+	{
+		fn00f828()
+	}
+
+	if (D1.s16 < 0)
+	{
+		// if (global.inv_gravity)
+		// {
+			// char.position.y.u16 -= D1.u16
+			// char.rotation = 0x80 - u8[0xfffff768]
+			// char.groundspeed = 0
+			// char.velocity.x = 0
+			// char.velocity.y = 0
+
+			// Character.LandingOnGroundNoSpindash()
+			// char.state = char.state.STANDING
+		// }
+		// else
+		{
+			fn016d6e()
+		}
+	}
+	else
+	{
+		char.position.y.u16 += (super.active) ? (2 * sign) : sign
+
+		D1 = -1
+		fn016e10()
+	}
+}
+
+
+//# address-hook(0x016ed2) end(0x016efc)
+function void fn016ed2()
+{
+	if (!competition_mode.active)
+	{
+		base.fn016ed2()
+		return
+	}
+
+	// Knuckles dropped off the bottom of a wall while climbing down
+	char.double_jump_state = 2			// Knuckles glide drop state
+	char.state = char.state.KNUX_FALLING
+	char.state.former = char.state.KNUX_FALLING		// Set this variable as well to prevent animation reset
+	char.animation.sprite = 0x31		// Set Knuckles dropping sprite
+	char.animation.timer = 7
+	char.animation.frame = 1
+	char.hitbox_extends.x = char.hitbox.default.x
+	char.hitbox_extends.y = char.hitbox.default.y
+}
+
+
+//# address-hook(0x016e10)
+function void fn016e10()
+{
+	if (!competition_mode.active)
+	{
+		base.fn016e10()
+		return
+	}
+
+	// Shared climbing animation update
+	D0.u8 = control.player1.state & (CONTROL_UP | CONTROL_DOWN)
+	if (D0.u8 == 0)
+	{
+	#if STANDALONE
+		// Check if Knuckles is hanging in mid-air, e.g. after he got pushed down by a moving object (like a HCZ pillar)
+		D2.u16 = char.position.y.u16 + (/* global.inv_gravity ? -11 : */ 11)
+		fn016f4e()
+		if (D1.s16 != 0)
+		{
+			fn016ed2()
+			return
+		}
+	#endif
+
+		D5.u8 = char.layer_flags1
+		D2.u16 = char.position.y.u16 + 9
+		D3.u16 = char.position.x.u16
+		fn00f828()
+		if (D1.s16 < 0)
+		{
+			fn016d6e()
+			return
+		}
+
+	#if STANDALONE
+		// This fixes an animation bug when Knuckles is on a wall, but very close to the ground
+		D1.s16 = 0
+	#endif
+	}
+
+	if (D1.s16 != 0)
+	{
+		--knuckles.glide_direction
+		if (s8(knuckles.glide_direction) < 0)
+		{
+			knuckles.glide_direction = 3
+
+			D1.u8 += char.animation.sprite
+			if (D1.u8 < 0x2c)
+				D1.u8 = 0x2e
+			if (D1.u8 > 0x2e)
+				D1.u8 = 0x2c
+			char.animation.sprite = D1.u8
+
+		#if STANDALONE
+			// Fix for an animation bug
+			char.state = char.state.KNUX_FLYCLIMB
+		#endif
+		}
+	}
+
+	fn016e60()
+}
+
+
+//# address-hook(0x016e60)
+function void fn016e60()
+{
+	if (!competition_mode.active)
+	{
+		base.fn016e60()
+		return
+	}
+
+	// Climbing idle state update
+	char.animation.timer = 0x20
+	char.animation.frame = 0
+	if (control.player1 & CONTROL_ABC)
+	{
+		// Knuckles jumping off the wall
+		char.velocity.y = -0x380
+		char.velocity.x = 0x400
+		char.flags ^= char.flag.FACING_LEFT
+		if (char.flags & char.flag.FACING_LEFT)
+			char.velocity.x = -char.velocity.x
+
+		char.flags |= (char.flag.IN_AIR | char.flag.ROLLING)
+		char.state = char.state.ROLLING
+		char.jumping = 1
+		char.hitbox_extends.x = 3
+		char.hitbox_extends.y = 7
+		char.double_jump_state = 0		// Allow gliding again
+	}
+}
+
+
+//# address-hook(0x016eba)
+function void fn016eba()
+{
+	if (!competition_mode.active)
+	{
+		base.fn016eba()
+		return
+	}
+
+	char.double_jump_state = 5	// Knuckles ledge climb state
+	if (char.animation.sprite != 0x2b)
+	{
+		knuckles.glide_direction = 0
+		fn016efe()
+	}
+}
+
+
+//# address-hook(0x016efe) end(0x016f3c)
+function void fn016efe()
+{
+	if (!competition_mode.active)
+	{
+		base.fn016efe()
+		return
+	}
+
+	// A1 = 0x016f3e + s8(knuckles.glide_direction)
+	// char.animation.sprite = u8[A1]
+	// s8 dx = s8[A1 + 1]
+	// s8 dy = s8[A1 + 2]
+	// char.animation.timer = u8[A1 + 3]
+	// A1 += 4
+
+	char.animation.sprite = 0x2b
+	char.animation.timer = 6
+
+	char.position.x.u16 += (char.flags & char.flag.FACING_LEFT) ? -6 : 6
+	char.position.y.u16 += /* (global.inv_gravity) ? -12 : */ -12
+
+	knuckles.glide_direction += 4
+	char.animation.frame = 0
+}
+
+
+//# address-hook(0x016fa8) end(0x016fec)
+function void fn016fa8()
+{
+	if (!competition_mode.active)
+	{
+		base.fn016fa8()
+		return
+	}
+
+	char.animation.timer = 0x20
+	char.animation.frame = 0
+	char.state.both = 0x2020		// char.state.KNUX_FLYCLIMB, char.state.KNUX_FLYCLIMB
+
+	char.flags &= ~(char.flag.FACING_LEFT | char.flag.PUSHING)
+
+	D0 = u8(knuckles.glide_direction + 0x10) >> 5
+	// D1.u8 = u8[0x016fee + D0.u8]
+	// char.animation.sprite = D1.u8
+	if (D0 == 4)
+	{
+		char.flags |= char.flag.FACING_LEFT
+		char.animation.sprite = 0x2f
+	}
+	else if (D0 == 0)
+	{
+		char.animation.sprite = 0x2f
+	}
+	else
+	{
+		char.animation.sprite = 0x30
+	}
+}
+
+
+//# address-hook(0x01793e) end(0x017b16)
+function void fn01793e()
+{
+	if (!competition_mode.active)
+	{
+		base.fn01793e()
+		return
+	}
+
+	u32[0xfffff796] = (char.layer_flags1 == 0x0c) ? u32[0xfffff7b4] : u32[0xfffff7b8]
+
+	D5.u8 = char.layer_flags2
+	u8 angle = lookupAngleByVector(char.velocity.x, char.velocity.y)
+	angle = (angle - 0x20) & 0xc0
+
+	if (angle == 0)
+	{
+		Character.CheckLeftWallCollision()
+		if (D1.s16 < 0)
+		{
+			char.position.x.u16 -= D1.u16
+			char.velocity.x = 0
+			knuckles.glideclimbstate |= knuckles.glideclimbstate.climbstate
+		}
+
+		Character.CheckRightWallCollision()
+		if (D1.s16 < 0)
+		{
+			char.position.x.u16 += D1.u16
+			char.velocity.x = 0
+			knuckles.glideclimbstate |= knuckles.glideclimbstate.climbstate
+		}
+
+		Character.CheckFloorCollision()
+		if (D1.s16 < 0)
+		{
+			char.position.y.u16 += /* global.inv_gravity ? -D1.s16 : */ D1.s16
+			char.rotation = D3.u8
+			char.velocity.y = 0
+			knuckles.glideclimbstate &= ~knuckles.glideclimbstate.glidestate
+		}
+	}
+	else if (angle == 0x40)
+	{
+		Character.CheckLeftWallCollision()
+		if (D1.s16 < 0)
+		{
+			char.position.x.u16 -= D1.u16
+			char.velocity.x = 0
+			knuckles.glideclimbstate |= knuckles.glideclimbstate.climbstate
+		}
+
+		Character.CheckCeilingCollision()
+		if (D1.s16 < 0)
+		{
+			D1.s16 = -D1.s16
+			if (D1.u16 < 0x14)
+			{
+				// if (global.inv_gravity)
+					// D1.s16 = -D1.s16 
+				char.position.y.u16 += D1.u16
+				if (char.velocity.y < 0)
+					char.velocity.y = 0
+				return
+			}
+			Character.CheckRightWallCollision()
+			if (D1.s16 < 0)
+			{
+				char.position.x.u16 += D1.u16
+				char.velocity.x = 0
+				knuckles.glideclimbstate |= knuckles.glideclimbstate.climbstate
+			}
+			return
+		}
+
+		if (char.velocity.y >= 0)
+		{
+			Character.CheckFloorCollision()
+			if (D1.s16 < 0)
+			{
+				char.position.y.u16 += /* global.inv_gravity ? -D1.s16 : */ D1.s16
+				char.rotation = D3.u8
+				char.velocity.y = 0
+				knuckles.glideclimbstate &= ~knuckles.glideclimbstate.glidestate
+			}
+		}
+	}
+	else if (angle == 0x80)
+	{
+		Character.CheckLeftWallCollision()
+		if (D1.s16 < 0)
+		{
+			char.position.x.u16 -= D1.u16
+			char.velocity.x = 0
+			knuckles.glideclimbstate |= knuckles.glideclimbstate.climbstate
+		}
+
+		Character.CheckRightWallCollision()
+		if (D1.s16 < 0)
+		{
+			char.position.x.u16 += D1.u16
+			char.velocity.x = 0
+			knuckles.glideclimbstate |= knuckles.glideclimbstate.climbstate
+		}
+
+		Character.CheckCeilingCollision()
+		if (D1.s16 < 0)
+		{
+			// if (global.inv_gravity)
+			// D1.s16 = -D1.s16
+			char.position.y.u16 -= D1.u16
+			char.velocity.y = 0
+		}
+	}
+	else if (angle == 0xc0)
+	{
+		Character.CheckRightWallCollision()
+		if (D1.s16 < 0)
+		{
+			char.position.x.u16 += D1.u16
+			char.velocity.x = 0
+			knuckles.glideclimbstate |= knuckles.glideclimbstate.climbstate
+		}
+
+		Character.CheckCeilingCollision()
+		if (D1.s16 < 0)
+		{
+			// if (global.inv_gravity)
+				// D1.s16 = -D1.s16
+			char.position.y.u16 -= D1.u16
+			if (char.velocity.y < 0)
+				char.velocity.y = 0
+			return
+		}
+
+		if (char.velocity.y >= 0)
+		{
+			Character.CheckFloorCollision()
+			if (D1.s16 < 0)
+			{
+				char.position.y.u16 += /* global.inv_gravity ? -D1.s16 : */ D1.s16
+				char.rotation = D3.u8
+				char.velocity.y = 0
+				knuckles.glideclimbstate &= ~knuckles.glideclimbstate.glidestate
+			}
+		}
+	}
+}
+
+
+function void KnucklesPressedJumpInMidAir()
+{
+	if (!competition_mode.active)
+	{
+		base.KnucklesPressedJumpInMidAir()
+		return
+	}
+
+// #if !STANDALONE
+	// if (Character.performSuperTransformation())
+		// return
+// #endif
+
+	// Start gliding
+	char.flags &= ~(char.flag.ROLLING | char.flag.CONTROL_LOCK)
+	char.hitbox_extends.y = 8
+	char.hitbox_extends.x = 8
+	char.double_jump_state = 1
+	char.velocity.y += 0x200
+	if (char.velocity.y < 0)
+		char.velocity.y = 0
+
+	char.groundspeed = 0x400
+	if (char.flags & char.flag.FACING_LEFT)
+	{
+		char.velocity.x = -char.groundspeed
+		knuckles.glide_direction = -0x80
+	}
+	else
+	{
+		char.velocity.x = char.groundspeed
+		knuckles.glide_direction = 0
+	}
+	char.rotation.both = 0
+	knuckles.glideclimbstate = knuckles.glideclimbstate.glidestate
+
+	fn016fa8()
+}
+
+
+function void Character.LandingOnGroundStandUp()
+{
+	if (!competition_mode.active)
+	{
+		base.Character.LandingOnGroundStandUp()
+		return
+	}
+
+	D0.u8 = char.hitbox_extends.y		// Setting D0.u8 here is important for some reason
+	char.hitbox_extends.x = char.hitbox.default.x
+	char.hitbox_extends.y = char.hitbox.default.y
+
+#if STANDALONE
+	// Correct position also if Knuckles just started gliding when hitting the ground in the same frame
+	//  -> Yes, this happens, and yes, this can otherwise kill you if there's a killing blocker object in the floor
+	if ((char.flags & char.flag.ROLLING) || (char.character == CHARACTER_KNUCKLES && knuckles.glideclimbstate == knuckles.glideclimbstate.glidestate))
+#else
+	if (char.flags & char.flag.ROLLING)
+#endif
+	{
+		char.flags &= ~char.flag.ROLLING
+	#if STANDALONE
+		// Do not change the state while transforming, as this would cause a soft-lock
+		if (char.state != char.state.TRANSFORMING)
+	#endif
+		{
+			char.state = char.state.RUNNING
+		}
+		D0.u8 -= char.hitbox.default.y
+
+		s16 dy = D0.s8
+		// if (global.inv_gravity != (char.rotation + 0x40 >= 0x80))
+			// dy = -dy
+		char.position.y.u16 += dy
+	}
+
+#if STANDALONE
+	if (char.character == CHARACTER_TAILS && char.state >= char.state.TAILS_FLYDOWN && char.state <= char.state.TAILS_SWIMTIRED)
+	{
+		// Don't keep flying on the object (which only gets corrected otherwise if pressing left or right)
+		char.state = char.state.RUNNING
+	}
+#endif
+}
+
+
+//# address-hook(0x012d36) end(0x012f80)
+//# alias(fn012d36) deprecated
+function void CompetitionMode.Character.UpdateAnimation.Sonic_Knuckles()
+{
+	 u8[0x01308d] = 0x2f
+	u16[0x013090] = 0x31ff
+	u16[0x013097] = 0x2bfd
+	base.CompetitionMode.Character.UpdateAnimation.Sonic_Knuckles()
+}

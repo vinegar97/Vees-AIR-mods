@@ -1,0 +1,242 @@
+//# address-hook(0x01b1f4) end(0x01b584)
+function void RenderSprites_CompetitionMode()
+{
+	if (competition_mode.multiplay != 0)
+	{
+		base.RenderSprites_CompetitionMode()
+		return
+	}
+
+#if STANDALONE
+	// Setup viewports, to be used in render queue ranges for the sprites
+	if (competition_mode.multiplay == 0)
+	{
+		Renderer.setViewport(0, 0, getScreenWidth(), getScreenHeight(), 0x97ff)
+	}
+	else
+	{
+		Renderer.setViewport(0, 0, getScreenWidth(), COMPMODE_VIEWPORT_HEIGHT_UPPER, 0x97ff)
+		Renderer.setViewport(0, getScreenHeight() - COMPMODE_VIEWPORT_HEIGHT_LOWER, getScreenWidth(), COMPMODE_VIEWPORT_HEIGHT_LOWER, 0x9bff)
+	}
+#endif
+
+	// Upper screen
+	D7 = 0x4d
+	D6 = 0
+	A5 = 0xffffac00
+	A3 = addressof(camera.foreground.x)
+	A6 = (u16[0xffffef3c] != 0) ? 0xffff7890 : 0xfffff810
+
+	if (global.level_started != 0)
+	{
+		// Render HUD (for debug mode)
+		fn00db3c()
+	}
+
+	while (A5 < 0xffffb000)
+	{
+		u8[A5] = u8[A5 + 0x01]
+		A4 = A5 + 2
+		while (u8[A5] != 0)
+		{
+			renderNextCompModeObject(0)
+			u8[A5] -= 2
+		}
+		A5 += 0x80
+	}
+
+	while (D7.s16 >= 0)
+	{
+		u16[A6] = 0
+		A6 += 8
+		--D7.s16
+	}
+
+/* if (!competition_mode.multiplay)
+	{
+		// u8[0xffffef3e] = 0xff
+		return
+	} */
+
+	if (u32[0xffffad02] == 0xb000b04a)
+	{
+		u32[0xffffad02] = 0xb04ab000
+	}
+
+	// Lower screen
+	D7 = 0x4f
+	A5 = 0xffffac00
+	A3 = addressof(camera.foreground.x.player2)
+	A6 = (u16[0xffffef3c] != 0) ? 0xffff7d80 : 0xffff7b00
+
+	while (A5 < 0xffffb000)
+	{
+		A4 = A5 + 2
+		while (u8[A5 + 0x01] != 0)
+		{
+			renderNextCompModeObject(1)
+			u8[A5 + 0x01] -= 2
+		}
+		A5 += 0x80
+	}
+
+	while (D7.s16 >= 0)
+	{
+		u16[A6] = 0
+		A6 += 8
+		--D7.s16
+	}
+	u8[0xffffef3e] = 0xff
+}
+
+
+function void renderNextCompModeObject(u8 splitScreenIndex)
+{
+	if (competition_mode.multiplay != 0)
+	{
+		base.renderNextCompModeObject(splitScreenIndex)
+		return
+	}
+
+	u16 renderQueue = 0x9800 + u16(splitScreenIndex) * 0x400
+
+	A0 = 0xffff0000 + u16[(A4+=2)-2]
+	if (splitScreenIndex == 0)
+	{
+		objA0.render_flags &= ~render_flag.VISIBLE		// Reset visibility flag
+		D6.u8 = objA0.render_flags
+		if (D6 & render_flag.COMPETITION_P2_SCREEN)
+			return
+	}
+	else
+	{
+		D6.u8 = objA0.render_flags
+		if (D6 & render_flag.COMPETITION_P1_SCREEN)
+			return
+	}
+#if STANDALONE
+	u16 offsetY = (splitScreenIndex == 0) ? 0 : (getScreenHeight() - COMPMODE_VIEWPORT_HEIGHT_LOWER)
+	u16 viewportHeight = (splitScreenIndex == 0) ? COMPMODE_VIEWPORT_HEIGHT_UPPER : COMPMODE_VIEWPORT_HEIGHT_LOWER
+
+	if (competition_mode.multiplay == 0)
+	{
+		if ((splitScreenIndex != 0) || (D6 & render_flag.COMPETITION_P2_SCREEN))
+			return
+
+		offsetY =  0
+		viewportHeight = getScreenHeight()
+	}
+#else
+	u16 offsetY = (splitScreenIndex == 0) ? 0 : 0x70
+	u16 viewportHeight = 0x70
+#endif
+
+	D0.u16 = objA0.position.x.u16
+	D1.u16 = objA0.position.y.u16
+
+	// Special handling for compound objects
+	if (objA0.render_flags & render_flag.COMPOUND)
+	{
+		D0.u16 = (D0.u16 - u16[A3] + objA0.box_size.x) & level.width.bitmask
+		D3.u16 = objA0.box_size.x
+		D2.u16 = getScreenWidth() + objA0.box_size.x * 2
+		if (D0.u16 >= D2.u16)
+			return
+
+		D0.u16 = D0.u16 + 0x80 + offsetY - D3.u16
+		D1.u16 = (D1.u16 - u16[A3 + 0x04] + objA0.box_size.y) & level.height.bitmask
+		D3.u16 = objA0.box_size.y
+		D2.u16 = viewportHeight + objA0.box_size.y * 2
+		if (D1.u16 >= D2.u16)
+			return
+
+		D1.u16 = D1.u16 + 0x80 - D3.u16
+		objA0.render_flags |= render_flag.VISIBLE	// Set visibility flag
+		if (D7.s16 < 0)
+			return
+
+		D5.u16 = objA0.sprite_attributes
+		A2 = objA0.mapping_offset
+		D4 = objA0.animation.sprite
+		if (D4.u8 != 0)
+		{
+			A1 = tableLookupAddress(A2, D4.u16 * 2)
+			D4.s16 = s16[A1] - 1
+			A1 += 2
+			if (D4.s16 >= 0)
+			{
+				D3.u16 = D6.u16
+				writeToSpriteTableCompound(renderQueue)
+				D6.u16 = D3.u16
+				if (D7.s16 < 0)
+					return
+			}
+		}
+
+		D3.u16 = objA0.compound.count - 1	// Number of compound sprites
+		if (D3.s16 >= 0)
+		{
+			A0 += 0x18	// Start of compound sprite data (u8[A0 + 0x05] = map frame)
+			while (D3.s16 >= 0 && D7.s16 >= 0)
+			{
+				D0.u16 = (u16[A0]   - u16[A3]   + 0x80) & level.width.bitmask	// Compound sprite X position
+				D1.u16 = (u16[A0+2] - u16[A3+4] + 0x80) & level.height.bitmask	// Compound sprite Y position
+				D1.u16 += offsetY
+				D4 = u8[A0+5]	// Compound sprite map frame id
+				A0 += 6			// To next compound sprite (?)
+
+				A1 = tableLookupAddress(A2, D4.u16 * 2)
+				D4.s16 = s16[A1] - 1
+				A1 += 2
+				if (D4.s16 >= 0)
+				{
+					u16 backupD6 = D6.u16
+					writeToSpriteTableCompound(renderQueue)
+					D6.u16 = backupD6
+				}
+				--D3.s16
+			}
+		}
+	}
+	else
+	{
+		// Normal (non-compound) object
+		if (D6 & render_flag.WORLD)
+		{
+			D0.u16 = (D0.u16 - u16[A3] + objA0.box_size.x) & level.width.bitmask
+			D3.u16 = objA0.box_size.x
+			D2.u16 = getScreenWidth() + objA0.box_size.x * 2
+			if (D0.u16 >= D2.u16)
+				return
+
+			D0.u16 = D0.u16 + 0x80 - D3.u16
+			D1.u16 = (D1.u16 - u16[A3 + 0x04] + objA0.box_size.y) & level.height.bitmask
+			D3.u16 = objA0.box_size.y
+			D2.u16 = viewportHeight + objA0.box_size.y * 2
+			if (D1.u16 >= D2.u16)
+				return
+
+			D1.u16 = D1.u16 + 0x80 - D3.u16
+		}
+		D1.u16 += offsetY
+
+		objA0.render_flags |= render_flag.VISIBLE
+		if (D7.s16 >= 0)
+		{
+			A1 = objA0.mapping_offset
+			D4 = 0
+			if ((D6 & render_flag.STATIC_MAPPING) == 0)
+			{
+				D4.u16 = u16(objA0.animation.sprite) * 2
+				A1 = tableLookupAddress(A1, D4.u16)
+				D4.u16 = u16[(A1+=2)-2] - 1
+			}
+
+			if (D4.s16 >= 0)
+			{
+				D5.u16 = objA0.sprite_attributes
+				writeToSpriteTable(renderQueue)
+			}
+		}
+	}
+}

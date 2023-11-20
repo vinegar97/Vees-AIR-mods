@@ -1,0 +1,12 @@
+{
+	"Metadata":
+	{
+		"Name": "Competition Mode Enhanced",
+		"UniqueID": "vee-competition-plus",
+		"Author": "Vinnygar",
+		"Description": "Expands the screen in Competition Mode single player, and restores Knuckles' glide in the same mode",
+		"URL": "",
+		"ModVersion": "1.0.0.0",
+		"GameVersion": "20.07.18.0"
+	}
+}

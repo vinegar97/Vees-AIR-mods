@@ -1,0 +1,67 @@
+//# address-hook(0x23a63c) end(0x23a686)
+//# alias(fn23a63c) deprecated
+function void InitLevelTiles.CompetitonModeLevel_shared()
+{
+	if (competition_mode.multiplay != 0)
+	{
+		base.InitLevelTiles.CompetitonModeLevel_shared()
+		return
+	}
+
+	constant array<u16> competition.move_areas =
+	{
+		0x100, 0x120,		// Azure Lake
+		0x200, 0x320,		// Balloon Park
+		0x100, 0x120,		// Desert Palace
+		0, 0x100,			// Chrome Gadget
+		0x100, 0x120		// Endless Mine
+	}
+
+	u8 offset = (global.zone - 0x0e) * 2
+	move_area.top.target		= competition.move_areas[offset]
+	move_area.bottom.target		= competition.move_areas[offset+1]
+	camera.position.y.u16 = clamp(camera.position.y.u16, move_area.top.target, move_area.bottom.target)
+
+	base.InitLevelTiles.CompetitonModeLevel_shared()
+}
+
+
+//# address-hook(0x23a764) end(0x23a792)
+function void fn23a764()
+{
+	if (competition_mode.multiplay == 0)
+	{
+		A1 = 0xffffe000
+		A5 = 0xffffa800
+		D0.u16 = camera.background.y.u16
+		D3.u16 = camera.foreground.x.u16
+		D1 = getScreenHeight() - 1
+		fn239e9c()
+
+		fn23a04a()
+		return
+	}
+
+	base.fn23a764()
+}
+
+//# address-hook(0x23a796) end(0x23a7b6)
+//# alias(fn23a796) deprecated
+function void UpdateLevelScrolling.DPZ()
+{
+	if (competition_mode.multiplay == 0)
+	{
+		fn23a8dc()
+
+		A1 = 0xffffe000
+		D0.u16 = camera.foreground.x.u16
+		D1.u16 = camera.background.x.u16
+		D2 = 0x37
+		fn23a7ba()
+
+		fn23a04a()
+		return
+	}
+
+	base.UpdateLevelScrolling.DPZ()
+}
