@@ -1,5 +1,3 @@
-global u8 timer = 0
-global u8 frame = 0
 global u32 Vee_OriginsAnimations.customAnimationAddress = 0
 
 
