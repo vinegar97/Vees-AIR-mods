@@ -15,6 +15,7 @@ function void ApplyROMManipulations()
 
 	// Extend Super Sonic's running animation by two frame
 	u16[0x012c87] = 0x2324 		// Add additional frames
+}
 
 //# address-hook(0x012600) end(0x01286c)
 //# translated(0x012a2a) end(0x012a6e)
