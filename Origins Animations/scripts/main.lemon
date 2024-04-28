@@ -374,11 +374,10 @@ function u16 Standalone.getModdedAnimationSpriteEx(u8 character, u8 animationSpr
 
 	if ((char.control_flags & 0x02) == 0)
 		return animationSpriteEx
-
+if (u8[0xffffE654] == 0)
+{
 	if (animationSpriteEx == 0xe5 || animationSpriteEx == 0xe9)				// Hanging frames
 	{
-		/* if ((char.control_flags & 0x02) == 0) */
-		{
 			if (character == CHARACTER_TAILS && !(char.flags & char.flag.FACING_LEFT) && char.state != char.state.HANGING)
 				char.state = char.state.HANGING
 
@@ -411,7 +410,6 @@ function u16 Standalone.getModdedAnimationSpriteEx(u8 character, u8 animationSpr
 			if (char.animation.timer != 0)
 				char.animation.timer = 0
 		} */
-	}
 	else if (Vee_OriginsAnimations.customAnimationAddress != 0)		// 3D standing frames
 	/* else if (animationSpriteEx >= 0x55 && (animationSpriteEx <= ((char.render_flags & render_flag.FLIP_X) ? 0x5b+7 : 0x5b))) */
 	{
@@ -508,6 +506,7 @@ function u16 Standalone.getModdedAnimationSpriteEx(u8 character, u8 animationSpr
 				char.control_flags &= ~0x02
 		}
 	}
+}
 
 	return base.Standalone.getModdedAnimationSpriteEx(character, animationSprite)
 }
@@ -517,7 +516,7 @@ function u64 Standalone.getModdedAnimationSpriteKey(u8 character, u16 animationS
 	string key = ""
 	u32 char.object_standing_on.update_address = u32[0xffff0000 + char.object_standing_on]
 	u8 input_state = (character == CHARACTER_TAILS) ? control.tails.state : control.player1.state		// Get player input
-
+  if (u8[0xffffE654] == 0)
 	{
 		// Character-specific animations
 		if ((character == CHARACTER_TAILS && char.state == char.state.TAILS_TRANSFORM) || (character == CHARACTER_KNUCKLES && char.state == char.state.TRANSFORMING))
@@ -621,7 +620,6 @@ function u64 Standalone.getModdedAnimationSpriteKey(u8 character, u16 animationS
 
 	if (Renderer.hasCustomSprite(key))
 		return key
-
 	return base.Standalone.getModdedAnimationSpriteKey(character, animationSpriteEx)
 }
 
@@ -629,7 +627,7 @@ function u64 Standalone.getModdedAnimationSpriteKey(u8 character, u16 animationS
 //# translated(0x012a2a) end(0x012a6e)
 function void UpdateSonicAnimation()
 {
-	if ((char.state != char.state.STANDING) || super.active)
+	if ((char.state != char.state.STANDING) || super.active || u8[0xffffE654] >= 0)
 	{
 		base.UpdateSonicAnimation()
 		return
@@ -706,7 +704,7 @@ function void UpdateSonicAnimation()
 //# address-hook(0x015868)
 function void UpdateTailsAnimation_inner()
 {
-	if ((char.state != char.state.TAILS_TRANSFORM))
+	if ((char.state != char.state.TAILS_TRANSFORM) || u8[0xffffE654] >= 0)
 	{
 		base.UpdateTailsAnimation_inner()
 		return
@@ -718,7 +716,7 @@ function void UpdateTailsAnimation_inner()
 //# address-hook(0x017d30) end(0x017ef0)
 function void UpdateKnucklesAnimation()
 {
-	if ((char.state != char.state.TRANSFORMING))
+	if ((char.state != char.state.TRANSFORMING) || u8[0xffffE654] >= 0)
 	{
 		base.UpdateKnucklesAnimation()
 		return
@@ -795,7 +793,7 @@ function void UpdateTailsKnucklesAnimation_transform()
 			}
 		}
 	}
-}
+ }
 
 //# address-hook(0x034fbc) end(0x03518e)
 function void fn034fbc()
